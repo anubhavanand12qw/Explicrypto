@@ -222,7 +222,7 @@ public class Classify extends AppCompatActivity {
             Bitmap bitmap = MediaStore.Images.Media.getBitmap(getContentResolver(), uri);
             selected_image.setImageBitmap(bitmap);
             // not sure why this happens, but without this the image appears on its side
-            selected_image.setRotation(selected_image.getRotation() + 0);
+            selected_image.setRotation(selected_image.getRotation() + 90);
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -417,6 +417,9 @@ public class Classify extends AppCompatActivity {
 
         // set the corresponding textviews with the results
         label1.setText("1. "+topLables[2]);
+        if(topLables[2].contains("unsafe")){
+            Toast.makeText(Classify.this,"Image is Unsafe, please encrypt it.",Toast.LENGTH_SHORT).show();
+        }
         label2.setText("2. "+topLables[1]);
         label3.setText("3. "+topLables[0]);
         Confidence1.setText(topConfidence[2]);
