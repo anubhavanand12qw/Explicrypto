@@ -3,20 +3,25 @@ package com.example.cap_app;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.content.ContextCompat;
 
 import android.Manifest;
 import android.content.Intent;
 import android.content.pm.PackageManager;
+import android.database.Cursor;
 import android.graphics.Matrix;
 import android.graphics.drawable.BitmapDrawable;
+import android.graphics.drawable.Drawable;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.app.Activity;
 import android.content.res.AssetFileDescriptor;
 import android.graphics.Bitmap;
+import android.os.Environment;
 import android.os.SystemClock;
 import android.provider.MediaStore;
+import android.provider.OpenableColumns;
 import android.util.Log;
 import android.view.View;
 import android.widget.Button;
@@ -25,27 +30,50 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import java.io.BufferedReader;
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.File;
 import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.MappedByteBuffer;
 import java.nio.channels.FileChannel;
+import java.security.InvalidAlgorithmParameterException;
+import java.security.InvalidKeyException;
+import java.security.NoSuchAlgorithmException;
 import java.util.AbstractMap;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.PriorityQueue;
+import java.util.stream.Stream;
+
 import org.tensorflow.lite.Interpreter;
 import android.os.Bundle;
 import android.view.Window;
 import android.view.WindowManager;
 
+import com.karumi.dexter.Dexter;
+import com.karumi.dexter.MultiplePermissionsReport;
+import com.karumi.dexter.PermissionToken;
+import com.karumi.dexter.listener.PermissionRequest;
+import com.karumi.dexter.listener.multi.MultiplePermissionsListener;
+
+import javax.crypto.NoSuchPaddingException;
+
 
 public class Classify extends AppCompatActivity {
 
+    public static String FILE_NAME_ENC = "";
+    public static String FILE_NAME_DEC = "";
+    String my_key = "AUIPveKxJ60eb38b";//16char = 128 bits
+    String my_spec_key = "g6ly7tFKgCM21v4M";
 
     // presets for rgb conversion
     private static final int RESULTS_TO_SHOW = 3;
@@ -104,6 +132,10 @@ public class Classify extends AppCompatActivity {
                         }
                     });
 
+    Button btn_enc, btn_dec;
+    ImageView imageView;
+
+    File myDir;
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         System.out.println("6. Classify onCreate");
@@ -115,7 +147,6 @@ public class Classify extends AppCompatActivity {
         intValues = new int[DIM_IMG_SIZE_X * DIM_IMG_SIZE_Y];
 
         super.onCreate(savedInstanceState);
-
         //initilize graph and labels
         try{
             tflite = new Interpreter(loadModelFile(), tfliteOptions);
@@ -195,6 +226,128 @@ public class Classify extends AppCompatActivity {
         } catch (IOException e) {
             e.printStackTrace();
         }
+
+        btn_dec = (Button)findViewById(R.id.btn_decrypt);
+        btn_enc = (Button)findViewById(R.id.btn_encrypt);
+        imageView = (ImageView)findViewById(R.id.selected_image);
+
+        //Init path
+        myDir = new File(Environment.getExternalStorageDirectory().toString()+"/Pictures");
+
+        Dexter.withActivity(this)
+                .withPermissions(new String[]{
+                        Manifest.permission.READ_EXTERNAL_STORAGE,
+                        Manifest.permission.WRITE_EXTERNAL_STORAGE
+                })
+                .withListener(new MultiplePermissionsListener(){
+
+
+                    @Override
+                    public void onPermissionsChecked(MultiplePermissionsReport report) {
+                        btn_dec.setEnabled(true);
+                        btn_enc.setEnabled(true);
+                    }
+
+                    @Override
+                    public void onPermissionRationaleShouldBeShown(List<PermissionRequest> permissions, PermissionToken token) {
+
+                    }
+                }).check();
+
+        btn_dec.setOnClickListener(new View.OnClickListener(){
+            @Override
+            public void onClick(View view) {
+                FILE_NAME_DEC = getFileName(uri)+".png";
+                File delete_junk = new File(myDir,getFileName(uri));
+                File outputFileDec = new File(myDir,FILE_NAME_DEC);
+                File encFile = new File(myDir, FILE_NAME_ENC);
+                try{
+                    MyEncrypter.decryptToFile(my_key,my_spec_key,new FileInputStream(encFile),
+                            new FileOutputStream(outputFileDec));
+                    //After that set for image view
+                    selected_image.setImageURI(Uri.fromFile(outputFileDec));
+                    //imageView.setImageURI(Uri.fromFile(outputFileDec));
+                    //If you want to delete file after decrypt, keep this
+                    delete_junk.delete();
+                    Toast.makeText(Classify.this, "Decrypted", Toast.LENGTH_SHORT).show();
+
+
+                } catch (IOException e) {
+                    e.printStackTrace();
+                } catch (NoSuchAlgorithmException e) {
+                    e.printStackTrace();
+                } catch (InvalidKeyException e) {
+                    e.printStackTrace();
+                } catch (InvalidAlgorithmParameterException e) {
+                    e.printStackTrace();
+                } catch (NoSuchPaddingException e) {
+                    e.printStackTrace();
+                }
+            }
+        });
+        btn_enc.setOnClickListener(new View.OnClickListener(){
+            @Override
+            public void onClick(View view) {
+                //Convert drawable to Bitmap
+                //BitmapDrawable drawable = (BitmapDrawable) imageView.getDrawable();
+                //Bitmap bitmap = drawable.getBitmap();
+                System.out.println("Encryption started");
+                Bitmap bitmap = null;
+                try {
+                    bitmap = MediaStore.Images.Media.getBitmap(getContentResolver(), uri);
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+                ByteArrayOutputStream stream = new ByteArrayOutputStream();
+                bitmap.compress(Bitmap.CompressFormat.PNG,100,stream);
+                InputStream is = new ByteArrayInputStream(stream.toByteArray());
+                System.out.println("Encryption, Image converted");
+
+                //Create file
+                FILE_NAME_ENC = getFileName(uri);
+                System.out.println("Encryp. file name taken"+FILE_NAME_ENC);
+                File outputFileEnc = new File(myDir, FILE_NAME_ENC);
+                try{
+                    MyEncrypter.encryptToFile(my_key,my_spec_key,is,new FileOutputStream(outputFileEnc));
+                    Toast.makeText(Classify.this, "Encrypted", Toast.LENGTH_SHORT).show();
+                    selected_image.setImageBitmap(null);
+                } catch (IOException e) {
+                    e.printStackTrace();
+                } catch (NoSuchAlgorithmException e) {
+                    e.printStackTrace();
+                } catch (InvalidKeyException e) {
+                    e.printStackTrace();
+                } catch (InvalidAlgorithmParameterException e) {
+                    e.printStackTrace();
+                } catch (NoSuchPaddingException e) {
+                    e.printStackTrace();
+                }
+            }
+        });
+
+    }
+
+    //extract the file name from URI returned from Intent.ACTION_GET_CONTENT?
+    public String getFileName(Uri uri) {
+        String result = null;
+        if (uri.getScheme().equals("content")) {
+            Cursor cursor = getContentResolver().query(uri, null, null, null, null);
+            try {
+                if (cursor != null && cursor.moveToFirst()) {
+                    result = cursor.getString(cursor.getColumnIndex(OpenableColumns.DISPLAY_NAME));
+                }
+            } finally {
+                cursor.close();
+            }
+        }
+        if (result == null) {
+            result = uri.getPath();
+            int cut = result.lastIndexOf('/');
+            if (cut != -1) {
+                result = result.substring(cut + 1);
+            }
+        }
+        return result;
     }
 
     // loads tflite grapg from file

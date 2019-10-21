@@ -63,4 +63,5 @@ dependencies {
     compile 'org.tensorflow:tensorflow-lite:+'
     compile 'com.intellij:annotations:+@jar'
     implementation 'androidx.annotation:annotation:1.1.0'
+    implementation 'com.karumi:dexter:5.0.0'
 }
