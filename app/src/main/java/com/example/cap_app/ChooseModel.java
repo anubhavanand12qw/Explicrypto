@@ -50,6 +50,7 @@ public class ChooseModel extends AppCompatActivity {
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
+        System.out.println("1. Starting first !!");
         super.onCreate(savedInstanceState);
         requestWindowFeature(Window.FEATURE_NO_TITLE); //will hide the title
         getSupportActionBar().hide(); // hide the title bar
@@ -86,6 +87,7 @@ public class ChooseModel extends AppCompatActivity {
                 // model in not quantized
                 //quant = false;
                 // open camera
+                System.out.println("2. Opening camera intent");
                 openCameraIntent();
             }
         });
@@ -108,6 +110,7 @@ public class ChooseModel extends AppCompatActivity {
 
     // opens camera for user
     private void openCameraIntent(){
+        System.out.println("3. Open camera intent");
         ContentValues values = new ContentValues();
         values.put(MediaStore.Images.Media.TITLE, "New Picture");
         values.put(MediaStore.Images.Media.DESCRIPTION, "From your Camera");
@@ -124,6 +127,7 @@ public class ChooseModel extends AppCompatActivity {
     // checks that the user has allowed all the required permission of read and write and camera. If not, notify the user and close the application
     @Override
     public void onRequestPermissionsResult(final int requestCode, @NonNull final String[] permissions, @NonNull final int[] grantResults) {
+        System.out.println("4. onRequestPermissionsResult");
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
         if (requestCode == REQUEST_PERMISSION) {
             if (!(grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED)) {
@@ -137,8 +141,21 @@ public class ChooseModel extends AppCompatActivity {
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data){
         super.onActivityResult(requestCode, resultCode, data);
+        System.out.println("5. onActivityResult");
+        System.out.println("5.1. onActivityResult");
+        Intent i = new Intent(ChooseModel.this, Classify.class);
+        // put image data in extras to send
+        i.putExtra("resID_uri", imageUri);
+        // put filename in extras
+        i.putExtra("chosen", chosen);
+        // put model type in extras
+        //i.putExtra("quant", quant);
+        // send other required data
+        startActivity(i);
+        setContentView(R.layout.activity_classify);
+
         // if the camera activity is finished, obtained the uri, crop it to make it square, and send it to 'Classify' activity
-        if(requestCode == REQUEST_IMAGE && resultCode == RESULT_OK) {
+        /*if(requestCode == REQUEST_IMAGE && resultCode == RESULT_OK) {
             try {
                 Uri source_uri = imageUri;
                 Uri dest_uri = Uri.fromFile(new File(getCacheDir(), "cropped"));
@@ -147,10 +164,11 @@ public class ChooseModel extends AppCompatActivity {
             } catch (Exception e) {
                 e.printStackTrace();
             }
-        }
+        }*/
 
         // if cropping acitivty is finished, get the resulting cropped image uri and send it to 'Classify' activity
-        else if(requestCode == Crop.REQUEST_CROP && resultCode == RESULT_OK){
+        /*else if(requestCode == Crop.REQUEST_CROP && resultCode == RESULT_OK){
+            System.out.println("5.1. onActivityResult");
             imageUri = Crop.getOutput(data);
             Intent i = new Intent(ChooseModel.this, Classify.class);
             // put image data in extras to send
@@ -162,6 +180,6 @@ public class ChooseModel extends AppCompatActivity {
             // send other required data
             startActivity(i);
             setContentView(R.layout.activity_classify);
-        }
+        }*/
     }
 }
