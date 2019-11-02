@@ -132,10 +132,15 @@ public class Classify extends AppCompatActivity {
                         }
                     });
 
-    Button btn_enc, btn_dec;
+    Button btn_enc, btn_dec,btn_select_file;
     ImageView imageView;
-
+    Intent myFileIntent;
     File myDir;
+    File FINAL_FILE_NAME_ENC;
+    File FINAL_FILE_NAME_DEC;
+    Boolean SELECT_USED = false;
+    String FINAL_MY_DIR;
+    String FINAL_PATH_STRING;
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         System.out.println("6. Classify onCreate");
@@ -222,7 +227,7 @@ public class Classify extends AppCompatActivity {
             Bitmap bitmap = MediaStore.Images.Media.getBitmap(getContentResolver(), uri);
             selected_image.setImageBitmap(bitmap);
             // not sure why this happens, but without this the image appears on its side
-            selected_image.setRotation(selected_image.getRotation() + 90);
+            selected_image.setRotation(selected_image.getRotation() + 0);
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -233,6 +238,8 @@ public class Classify extends AppCompatActivity {
 
         //Init path
         myDir = new File(Environment.getExternalStorageDirectory().toString()+"/Pictures");
+        System.out.println("myDir: "+myDir.toString());
+        FINAL_MY_DIR = myDir.toString();
 
         Dexter.withActivity(this)
                 .withPermissions(new String[]{
@@ -257,32 +264,77 @@ public class Classify extends AppCompatActivity {
         btn_dec.setOnClickListener(new View.OnClickListener(){
             @Override
             public void onClick(View view) {
-                FILE_NAME_DEC = getFileName(uri)+".png";
-                File delete_junk = new File(myDir,getFileName(uri));
-                File outputFileDec = new File(myDir,FILE_NAME_DEC);
-                File encFile = new File(myDir, FILE_NAME_ENC);
-                try{
-                    MyEncrypter.decryptToFile(my_key,my_spec_key,new FileInputStream(encFile),
-                            new FileOutputStream(outputFileDec));
-                    //After that set for image view
-                    selected_image.setImageURI(Uri.fromFile(outputFileDec));
-                    //imageView.setImageURI(Uri.fromFile(outputFileDec));
-                    //If you want to delete file after decrypt, keep this
-                    delete_junk.delete();
-                    Toast.makeText(Classify.this, "Decrypted", Toast.LENGTH_SHORT).show();
+                if(SELECT_USED==false){
+                    FILE_NAME_DEC = getFileName(uri)+".png";
+                    System.out.println("FILE_NAME_DEC: "+FILE_NAME_DEC);
+                    File delete_junk = new File(myDir,getFileName(uri));
+                    File outputFileDec = new File(myDir,FILE_NAME_DEC);
+                    System.out.println("outputFileDec: "+outputFileDec.toString());
+                    FINAL_FILE_NAME_DEC = outputFileDec;
+                    File encFile = new File(myDir, FILE_NAME_ENC);
+                    FINAL_FILE_NAME_ENC = encFile;
+                    System.out.println("encFile: "+encFile);
+                    delete_junk = FINAL_FILE_NAME_ENC;
 
 
-                } catch (IOException e) {
-                    e.printStackTrace();
-                } catch (NoSuchAlgorithmException e) {
-                    e.printStackTrace();
-                } catch (InvalidKeyException e) {
-                    e.printStackTrace();
-                } catch (InvalidAlgorithmParameterException e) {
-                    e.printStackTrace();
-                } catch (NoSuchPaddingException e) {
-                    e.printStackTrace();
+
+                    try{
+                        System.out.println("FINAL_FILE_NAME_ENC: "+FINAL_FILE_NAME_ENC);
+                        System.out.println("FINAL_FILE_NAME_DEC: "+FINAL_FILE_NAME_DEC);
+                        MyEncrypter.decryptToFile(my_key,my_spec_key,new FileInputStream(FINAL_FILE_NAME_ENC),
+                                new FileOutputStream(FINAL_FILE_NAME_DEC));
+                        //After that set for image view
+                        selected_image.setImageURI(Uri.fromFile(FINAL_FILE_NAME_DEC));
+                        //imageView.setImageURI(Uri.fromFile(outputFileDec));
+                        //If you want to delete file after decrypt, keep this
+                        delete_junk.delete();
+                        Toast.makeText(Classify.this, "Decrypted", Toast.LENGTH_SHORT).show();
+
+
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                    } catch (NoSuchAlgorithmException e) {
+                        e.printStackTrace();
+                    } catch (InvalidKeyException e) {
+                        e.printStackTrace();
+                    } catch (InvalidAlgorithmParameterException e) {
+                        e.printStackTrace();
+                    } catch (NoSuchPaddingException e) {
+                        e.printStackTrace();
+                    }
+                }else{
+                    SELECT_USED = false;
+                    FINAL_FILE_NAME_ENC = new File(FINAL_PATH_STRING);
+                    FINAL_PATH_STRING = FINAL_PATH_STRING+".png";
+                    FINAL_FILE_NAME_DEC = new File(FINAL_PATH_STRING);
+
+                    File delete_junk = FINAL_FILE_NAME_ENC;
+                    try{
+                        System.out.println("FINAL_FILE_NAME_ENC: "+FINAL_FILE_NAME_ENC);
+                        System.out.println("FINAL_FILE_NAME_DEC: "+FINAL_FILE_NAME_DEC);
+                        MyEncrypter.decryptToFile(my_key,my_spec_key,new FileInputStream(FINAL_FILE_NAME_ENC),
+                                new FileOutputStream(FINAL_FILE_NAME_DEC));
+                        //After that set for image view
+                        selected_image.setImageURI(Uri.fromFile(FINAL_FILE_NAME_DEC));
+                        //imageView.setImageURI(Uri.fromFile(outputFileDec));
+                        //If you want to delete file after decrypt, keep this
+                        delete_junk.delete();
+                        Toast.makeText(Classify.this, "Decrypted", Toast.LENGTH_SHORT).show();
+
+
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                    } catch (NoSuchAlgorithmException e) {
+                        e.printStackTrace();
+                    } catch (InvalidKeyException e) {
+                        e.printStackTrace();
+                    } catch (InvalidAlgorithmParameterException e) {
+                        e.printStackTrace();
+                    } catch (NoSuchPaddingException e) {
+                        e.printStackTrace();
+                    }
                 }
+
             }
         });
         btn_enc.setOnClickListener(new View.OnClickListener(){
@@ -325,6 +377,37 @@ public class Classify extends AppCompatActivity {
             }
         });
 
+        btn_select_file = (Button)findViewById(R.id.select_btn);
+        btn_select_file.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                myFileIntent = new Intent(Intent.ACTION_GET_CONTENT);
+                myFileIntent.setType("*/*");
+                startActivityForResult(myFileIntent,10);
+            }
+        });
+
+    }
+
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, @Nullable Intent data) {
+        switch (requestCode){
+            case 10:
+                if(resultCode==RESULT_OK){
+                    String path = data.getData().getPath();
+                    System.out.println(path);
+                    String temp[] = path.split("/");
+                    path = temp[temp.length-1];
+                    path = FINAL_MY_DIR+"/"+path;
+                    FINAL_PATH_STRING = path;
+                    //FINAL_FILE_NAME_ENC = new File(path);
+                    System.out.println("path: "+path);
+                    //path = FINAL_MY_DIR+"/"+path+".png";
+                    //FINAL_FILE_NAME_DEC = new File(path);
+                    SELECT_USED = true;
+                }
+                break;
+        }
     }
 
     //extract the file name from URI returned from Intent.ACTION_GET_CONTENT?
